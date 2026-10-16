@@ -1,0 +1,13 @@
+{
+  "id": "./",
+  "name": "GymTracker - Your training space",
+  "short_name": "GymTracker",
+  "description": "Your personal workout plan and strength training tracker.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#151612",
+  "theme_color": "#151612",
+  "icons": [{ "src": "./icons/gymtracker.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

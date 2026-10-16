@@ -1,0 +1,92 @@
+import type { Exercise, MuscleGroup, TemplateExercise, WorkoutTemplate } from './models'
+
+const catalog: Array<[string, MuscleGroup]> = [
+  ['Incline Dumbbell Chest Press', 'Chest'],
+  ['Seated Cable Row', 'Back'],
+  ['Flat Dumbbell Chest Press', 'Chest'],
+  ['Lat Pulldown', 'Back'],
+  ['Dumbbell Shoulder Press', 'Shoulders'],
+  ['Seated Dumbbell Biceps Curl', 'Arms'],
+  ['Cable Triceps Pushdown', 'Arms'],
+  ['Hack Squat', 'Legs'],
+  ['Leg Extension', 'Legs'],
+  ['Hip Thrust', 'Legs'],
+  ['Seated Leg Curl', 'Legs'],
+  ['Seated Calf Raise', 'Legs'],
+  ['Cable Rope Crunch', 'Core'],
+  ['Incline Smith Machine Bench Press', 'Chest'],
+  ['One-Arm Dumbbell Row', 'Back'],
+  ['Seated Lateral Raise', 'Shoulders'],
+  ['Reverse Machine Fly', 'Shoulders'],
+  ['Preacher Curl', 'Arms'],
+  ['Overhead Cable Triceps Extension', 'Arms'],
+  ['Flat Smith Machine Bench Press', 'Chest'],
+  ['Cable Cross-over', 'Chest'],
+  ['Dumbbell Lateral Raise', 'Shoulders'],
+  ['Dumbbell Hammer Curl', 'Arms'],
+]
+
+export const seedExercises: Exercise[] = catalog.map(([name, muscleGroup]) => ({
+  id: `exercise-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+  name,
+  muscleGroup: muscleGroup as MuscleGroup,
+  isCustom: false,
+  archived: false,
+}))
+
+export const seedTemplates: WorkoutTemplate[] = [
+  { id: 'upper-a', name: 'Upper A', focus: 'Chest & Back', dayIndex: 0, dayName: 'Monday', restSeconds: 150 },
+  { id: 'lower', name: 'Lower', focus: 'Legs & Core', dayIndex: 1, dayName: 'Tuesday', restSeconds: 150 },
+  { id: 'upper-b', name: 'Upper B', focus: 'Back & Shoulders', dayIndex: 3, dayName: 'Thursday', restSeconds: 150 },
+  { id: 'upper-c', name: 'Upper C', focus: 'Chest & Arms', dayIndex: 5, dayName: 'Saturday', restSeconds: 90 },
+]
+
+const row = (
+  templateId: string,
+  position: number,
+  exerciseName: string,
+  targetSets: number,
+  minReps: number,
+  maxReps: number,
+  repsNote?: string,
+): TemplateExercise => ({
+  id: `${templateId}-${position + 1}`,
+  templateId,
+  exerciseId: `exercise-${exerciseName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+  position,
+  targetSets,
+  minReps,
+  maxReps,
+  repsNote,
+  restSeconds: targetSets >= 3 && minReps <= 8 ? 150 : 90,
+})
+
+export const seedTemplateExercises: TemplateExercise[] = [
+  row('upper-a', 0, 'Incline Dumbbell Chest Press', 3, 8, 12),
+  row('upper-a', 1, 'Seated Cable Row', 3, 8, 12),
+  row('upper-a', 2, 'Flat Dumbbell Chest Press', 2, 8, 12),
+  row('upper-a', 3, 'Lat Pulldown', 3, 8, 12),
+  row('upper-a', 4, 'Dumbbell Shoulder Press', 2, 8, 12),
+  row('upper-a', 5, 'Seated Dumbbell Biceps Curl', 2, 10, 15),
+  row('upper-a', 6, 'Cable Triceps Pushdown', 2, 10, 15),
+  row('lower', 0, 'Hack Squat', 3, 8, 12),
+  row('lower', 1, 'Leg Extension', 2, 10, 15),
+  row('lower', 2, 'Hip Thrust', 3, 8, 12),
+  row('lower', 3, 'Seated Leg Curl', 3, 10, 15),
+  row('lower', 4, 'Seated Calf Raise', 3, 12, 20),
+  row('lower', 5, 'Cable Rope Crunch', 3, 10, 15),
+  row('upper-b', 0, 'Lat Pulldown', 3, 8, 12),
+  row('upper-b', 1, 'Incline Smith Machine Bench Press', 3, 8, 12),
+  row('upper-b', 2, 'One-Arm Dumbbell Row', 3, 8, 12, 'per side'),
+  row('upper-b', 3, 'Seated Lateral Raise', 3, 12, 20),
+  row('upper-b', 4, 'Reverse Machine Fly', 3, 12, 15),
+  row('upper-b', 5, 'Preacher Curl', 3, 10, 15),
+  row('upper-b', 6, 'Overhead Cable Triceps Extension', 2, 10, 15),
+  row('upper-c', 0, 'Flat Smith Machine Bench Press', 3, 8, 12),
+  row('upper-c', 1, 'Cable Cross-over', 2, 12, 15),
+  row('upper-c', 2, 'Lat Pulldown', 2, 10, 12),
+  row('upper-c', 3, 'Dumbbell Lateral Raise', 2, 12, 20),
+  row('upper-c', 4, 'Dumbbell Hammer Curl', 3, 10, 15),
+  row('upper-c', 5, 'Cable Triceps Pushdown', 3, 10, 15),
+  row('upper-c', 6, 'Cable Rope Crunch', 2, 12, 15),
+]
