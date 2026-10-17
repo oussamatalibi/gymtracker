@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Exercise, SessionExercise, TemplateExercise, UserSettings, WorkoutSession, WorkoutSet, WorkoutTemplate } from './models'
-import { seedExercises, seedTemplateExercises, seedTemplates } from './routine'
+import { seedExercises, seedTemplateExercises, seedTemplates, usesBlockCount } from './routine'
 
 class GymTrackerDatabase extends Dexie {
   exercises!: EntityTable<Exercise, 'id'>
@@ -34,6 +34,22 @@ class GymTrackerDatabase extends Dexie {
       sessionExercises: 'id, sessionId, exerciseId, [sessionId+position]',
       workoutSets: 'id, sessionId, sessionExerciseId, [sessionExerciseId+setNumber], completed',
       userSettings: 'id',
+    })
+    this.version(4).stores({
+      exercises: 'id, name, muscleGroup, isCustom, archived',
+      templates: 'id, dayIndex',
+      templateExercises: 'id, templateId, exerciseId, [templateId+position]',
+      sessions: 'id, status, startedAt, templateId',
+      sessionExercises: 'id, sessionId, exerciseId, [sessionId+position]',
+      workoutSets: 'id, sessionId, sessionExerciseId, [sessionExerciseId+setNumber], completed',
+      userSettings: 'id',
+    }).upgrade(async (transaction) => {
+      const openSessions = await transaction.table('sessions').where('status').anyOf('active', 'paused').toArray()
+      const openSessionIds = new Set(openSessions.map((session: { id: string }) => session.id))
+      const exercises = await transaction.table('sessionExercises').toArray()
+      await Promise.all(exercises.filter((exercise: { sessionId: string }) => openSessionIds.has(exercise.sessionId)).map((exercise: { id: string; exerciseName: string }) =>
+        transaction.table('sessionExercises').update(exercise.id, { loadType: usesBlockCount(exercise.exerciseName) ? 'blocks' : 'weight' }),
+      ))
     })
   }
 }

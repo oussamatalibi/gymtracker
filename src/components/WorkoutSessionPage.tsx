@@ -32,7 +32,7 @@ function formatDuration(milliseconds: number) {
 function WorkoutSessionPage({ session, onSessionChange }: Props) {
   const [details, setDetails] = useState<SessionDetails>({ exercises: [], sets: [] })
   const [previous, setPrevious] = useState<Record<string, WorkoutSet[]>>({})
-  const [drafts, setDrafts] = useState<Record<string, { weight: string; reps: string }>>({})
+  const [drafts, setDrafts] = useState<Record<string, { load: string; reps: string }>>({})
   const [now, setNow] = useState(Date.now())
   const [error, setError] = useState('')
 
@@ -81,19 +81,19 @@ function WorkoutSessionPage({ session, onSessionChange }: Props) {
     }
   }
 
-  async function changeSet(setId: string, field: 'weightKg' | 'reps', raw: string) {
+  async function changeSet(setId: string, field: 'weightKg' | 'blockCount' | 'reps', raw: string) {
     setDrafts((current) => ({
       ...current,
       [setId]: {
-        weight: field === 'weightKg' ? raw : current[setId]?.weight ?? '',
+        load: field !== 'reps' ? raw : current[setId]?.load ?? '',
         reps: field === 'reps' ? raw : current[setId]?.reps ?? '',
       },
     }))
     if (raw === '') return runAction(() => updateWorkoutSet(setId, field, null))
     if (field === 'weightKg' && /^\d+\.$/.test(raw)) return
     const value = Number(raw)
-    if (!Number.isFinite(value) || value < 0 || (field === 'reps' && (!Number.isInteger(value) || value < 1))) {
-      setError(field === 'reps' ? 'Reps must be a positive whole number.' : 'Weight must be zero or higher.')
+    if (!Number.isFinite(value) || value < 0 || ((field === 'reps' || field === 'blockCount') && !Number.isInteger(value)) || (field === 'reps' && value < 1)) {
+      setError(field === 'reps' ? 'Reps must be a positive whole number.' : field === 'blockCount' ? 'Block count must be a whole number.' : 'Weight must be zero or higher.')
       return
     }
     await runAction(() => updateWorkoutSet(setId, field, value))
@@ -122,7 +122,7 @@ function WorkoutSessionPage({ session, onSessionChange }: Props) {
         <div className="session-clock"><span>ELAPSED</span><strong>{formatDuration(elapsed)}</strong><span className={`session-status ${session.status}`}>{session.status}</span></div>
       </header>
 
-      <div className="session-progress"><div><span>SESSION PROGRESS</span><strong>{completedCount}<small> / {totalCount} sets</small></strong></div><div className="progress-track"><i style={{ width: `${totalCount ? completedCount / totalCount * 100 : 0}%` }} /></div><span className="volume-label">Logged volume <strong>{completedWeight.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg × reps</strong></span></div>
+      <div className="session-progress"><div><span>SESSION PROGRESS</span><strong>{completedCount}<small> / {totalCount} sets</small></strong></div><div className="progress-track"><i style={{ width: `${totalCount ? completedCount / totalCount * 100 : 0}%` }} /></div><span className="volume-label">Logged weight volume <strong>{completedWeight.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg × reps</strong></span></div>
 
       {session.status === 'paused' && <div className="paused-banner">Workout paused — the workout clock is stopped until you resume.</div>}
       {error && <p className="session-error" role="alert">{error}</p>}
@@ -130,24 +130,25 @@ function WorkoutSessionPage({ session, onSessionChange }: Props) {
       <div className="session-layout">
         <div className="session-exercises">
           {details.exercises.map((exercise, index) => {
+            const byBlocks = exercise.loadType === 'blocks'
             const exerciseSets = details.sets.filter((set) => set.sessionExerciseId === exercise.id).sort((a, b) => a.setNumber - b.setNumber)
             const previousSets = previous[exercise.exerciseId]?.filter((set) => set.completed) ?? []
             return (
               <article className="session-exercise" key={exercise.id}>
                 <div className="session-exercise-heading"><span className="exercise-number">{String(index + 1).padStart(2, '0')}</span><div className="exercise-info"><h2>{exercise.exerciseName}</h2><span>{exercise.muscleGroup}{exercise.repsNote ? ` · ${exercise.repsNote}` : ''}</span></div><span className="target-chip">{exercise.minReps}–{exercise.maxReps} reps</span></div>
-                <div className="set-head"><span>SET</span><span>WEIGHT (KG)</span><span>REPS</span><span>DONE</span></div>
+                <div className="set-head"><span>SET</span><span>{byBlocks ? 'BLOCKS' : 'WEIGHT (KG)'}</span><span>REPS</span><span>DONE</span></div>
                 <div className="set-list">
                   {exerciseSets.map((set) => (
                     <div className={`set-row ${set.completed ? 'set-done' : ''}`} key={set.id}>
                       <span className="set-number">{String(set.setNumber).padStart(2, '0')}</span>
-                      <input aria-label={`${exercise.exerciseName}, set ${set.setNumber}, weight in kilograms`} type="text" min="0" inputMode="decimal" placeholder="—" value={drafts[set.id]?.weight ?? (set.weightKg ?? '')} disabled={session.status === 'paused'} onChange={(event) => { void changeSet(set.id, 'weightKg', event.target.value) }} />
+                      <input aria-label={`${exercise.exerciseName}, set ${set.setNumber}, ${byBlocks ? 'block count' : 'weight in kilograms'}`} type="text" min="0" inputMode={byBlocks ? 'numeric' : 'decimal'} placeholder="—" value={drafts[set.id]?.load ?? (byBlocks ? (set.blockCount ?? '') : (set.weightKg ?? ''))} disabled={session.status === 'paused'} onChange={(event) => { void changeSet(set.id, byBlocks ? 'blockCount' : 'weightKg', event.target.value) }} />
                       <input aria-label={`${exercise.exerciseName}, set ${set.setNumber}, repetitions`} type="text" inputMode="numeric" placeholder="—" value={drafts[set.id]?.reps ?? (set.reps ?? '')} disabled={session.status === 'paused'} onChange={(event) => { void changeSet(set.id, 'reps', event.target.value) }} />
                       <button className={`complete-set ${set.completed ? 'checked' : ''}`} aria-label={set.completed ? `Mark set ${set.setNumber} incomplete` : `Complete set ${set.setNumber}`} disabled={session.status === 'paused'} onClick={() => { void runAction(() => setWorkoutSetComplete(set.id, !set.completed)) }}>{set.completed ? '✓' : ''}</button>
                     </div>
                   ))}
                 </div>
                 <div className="set-actions"><button disabled={session.status === 'paused'} onClick={() => { void runAction(() => addWorkoutSet(session.id, exercise.id)) }}>＋ Add set</button><button disabled={session.status === 'paused' || exerciseSets.length <= 1} onClick={() => { void runAction(() => removeLastWorkoutSet(exercise.id)) }}>− Remove last</button></div>
-                <div className="previous-performance"><span>PREVIOUS</span>{previousSets.length ? previousSets.map((set) => <b key={set.id}>{set.weightKg ?? '—'} kg × {set.reps ?? '—'}</b>) : <em>No completed performance yet</em>}</div>
+                <div className="previous-performance"><span>PREVIOUS</span>{previousSets.length ? previousSets.map((set) => <b key={set.id}>{byBlocks ? `${set.blockCount ?? '—'} blocks` : `${set.weightKg ?? '—'} kg`} × {set.reps ?? '—'}</b>) : <em>No completed performance yet</em>}</div>
               </article>
             )
           })}

@@ -71,7 +71,8 @@ function HistoryPage() {
 
   if (details) {
     const completedSets = details.sets.filter((set) => set.completed)
-    const volume = completedSets.reduce((sum, set) => sum + (set.weightKg ?? 0) * (set.reps ?? 0), 0)
+    const exerciseById = new Map(details.exercises.map((exercise) => [exercise.id, exercise]))
+    const volume = completedSets.reduce((sum, set) => sum + (exerciseById.get(set.sessionExerciseId)?.loadType === 'blocks' ? 0 : (set.weightKg ?? 0) * (set.reps ?? 0)), 0)
     const completedExercises = new Set(completedSets.map((set) => set.sessionExerciseId)).size
     return (
       <section className="history-page">
@@ -91,13 +92,13 @@ function HistoryPage() {
               <article className="history-exercise" key={exercise.id}>
                 <div className="history-exercise-heading"><span className="exercise-number">{String(index + 1).padStart(2, '0')}</span><div><h2>{exercise.exerciseName}</h2><p>{exercise.muscleGroup}{exercise.repsNote ? ` · ${exercise.repsNote}` : ''} · target {exercise.minReps}–{exercise.maxReps}</p></div><span className="history-set-count">{sets.filter((set) => set.completed).length}/{sets.length} sets</span></div>
                 <div className="history-set-list">
-                  {sets.map((set) => <div className={`history-set ${set.completed ? '' : 'pending'}`} key={set.id}><span>Set {set.setNumber}</span><strong>{set.weightKg === null ? '—' : `${set.weightKg} kg`} <small>×</small> {set.reps ?? '—'} reps</strong><span>{set.completed ? 'Completed' : 'Not completed'}</span></div>)}
+                  {sets.map((set) => { const byBlocks = exercise.loadType === 'blocks'; return <div className={`history-set ${set.completed ? '' : 'pending'}`} key={set.id}><span>Set {set.setNumber}</span><strong>{byBlocks ? `${set.blockCount ?? '—'} blocks` : set.weightKg === null ? '—' : `${set.weightKg} kg`} <small>×</small> {set.reps ?? '—'} reps</strong><span>{set.completed ? 'Completed' : 'Not completed'}</span></div> })}
                 </div>
               </article>
             )
           })}
         </div>
-        <p className="volume-note">Volume sums completed sets as weight × reps. For unilateral work, a logged “per side” set is counted once and is not doubled.</p>
+        <p className="volume-note">Volume sums completed weighted sets as weight × reps; machine block counts are shown separately. For unilateral work, a logged “per side” set is counted once and is not doubled.</p>
       </section>
     )
   }

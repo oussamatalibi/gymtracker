@@ -62,13 +62,15 @@ function parseSession(value: unknown): WorkoutSession {
 function parseSessionExercise(value: unknown): SessionExercise {
   if (!hasId(value) || !isString(value.sessionId) || !isString(value.exerciseId) || !isString(value.exerciseName) || !groups.includes(value.muscleGroup as MuscleGroup) || !isNumber(value.position) || !Number.isInteger(value.position) || value.position < 0 || !isNumber(value.targetSets) || !Number.isInteger(value.targetSets) || value.targetSets < 1 || !isNumber(value.minReps) || !Number.isInteger(value.minReps) || value.minReps < 1 || !isNumber(value.maxReps) || !Number.isInteger(value.maxReps) || value.maxReps < value.minReps || !isBool(value.isUnilateral)) invalid('Backup contains an invalid session exercise snapshot.')
   if (value.repsNote !== undefined && !isString(value.repsNote)) invalid('Backup contains an invalid session repetition note.')
-  return value as unknown as SessionExercise
+  if (value.loadType !== undefined && value.loadType !== 'weight' && value.loadType !== 'blocks') invalid('Backup contains an invalid exercise load type.')
+  return { ...value, loadType: value.loadType ?? 'weight' } as unknown as SessionExercise
 }
 
 function parseSet(value: unknown): WorkoutSet {
   if (!hasId(value) || !isString(value.sessionId) || !isString(value.sessionExerciseId) || !isNumber(value.setNumber) || !Number.isInteger(value.setNumber) || value.setNumber < 1 || !isNullableNumber(value.weightKg) || (value.weightKg !== null && value.weightKg < 0) || !isNullableNumber(value.reps) || (value.reps !== null && (!Number.isInteger(value.reps) || value.reps < 0)) || !isBool(value.completed) || !isNumber(value.updatedAt)) invalid('Backup contains an invalid workout set.')
-  if (value.completed && (value.weightKg === null || value.reps === null || value.reps < 1)) invalid('Backup contains a completed set without valid weight and reps.')
-  return value as unknown as WorkoutSet
+  if (value.blockCount !== undefined && value.blockCount !== null && (!isNumber(value.blockCount) || value.blockCount < 0 || !Number.isInteger(value.blockCount))) invalid('Backup contains an invalid block count.')
+  if (value.completed && ((value.weightKg === null && value.blockCount == null) || value.reps === null || value.reps < 1)) invalid('Backup contains a completed set without valid load and reps.')
+  return { ...value, blockCount: value.blockCount ?? null } as unknown as WorkoutSet
 }
 
 function parseSettings(value: unknown): UserSettings {

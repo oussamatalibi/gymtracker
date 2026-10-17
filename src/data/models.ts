@@ -67,6 +67,7 @@ export interface SessionExercise {
   maxReps: number
   repsNote?: string
   isUnilateral: boolean
+  loadType?: 'weight' | 'blocks'
 }
 
 export interface WorkoutSet {
@@ -75,6 +76,7 @@ export interface WorkoutSet {
   sessionExerciseId: string
   setNumber: number
   weightKg: number | null
+  blockCount?: number | null
   reps: number | null
   completed: boolean
   updatedAt: number

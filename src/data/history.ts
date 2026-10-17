@@ -14,15 +14,19 @@ export async function getCompletedWorkoutSummaries(): Promise<WorkoutSummary[]> 
     .sort((a, b) => (b.completedAt ?? b.startedAt) - (a.completedAt ?? a.startedAt))
 
   return Promise.all(sessions.map(async (session) => {
-    const sets = await db.workoutSets.where('sessionId').equals(session.id).toArray()
+    const [sets, exercises] = await Promise.all([
+      db.workoutSets.where('sessionId').equals(session.id).toArray(),
+      db.sessionExercises.where('sessionId').equals(session.id).toArray(),
+    ])
     const completedSets = sets.filter((set) => set.completed)
+    const exerciseById = new Map(exercises.map((exercise) => [exercise.id, exercise]))
     const exerciseIdsWithCompletedSets = new Set(completedSets.map((set) => set.sessionExerciseId))
     return {
       session,
       completedExerciseCount: exerciseIdsWithCompletedSets.size,
       completedSetCount: completedSets.length,
       totalSetCount: sets.length,
-      volumeKgReps: completedSets.reduce((sum, set) => sum + (set.weightKg ?? 0) * (set.reps ?? 0), 0),
+      volumeKgReps: completedSets.reduce((sum, set) => sum + (exerciseById.get(set.sessionExerciseId)?.loadType === 'blocks' ? 0 : (set.weightKg ?? 0) * (set.reps ?? 0)), 0),
     }
   }))
 }

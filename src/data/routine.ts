@@ -26,6 +26,25 @@ const catalog: Array<[string, MuscleGroup]> = [
   ['Dumbbell Hammer Curl', 'Arms'],
 ]
 
+// These machines are tracked by their selector-block position, not by kg.
+const blockCountExercises = new Set([
+  'Seated Cable Row',
+  'Lat Pulldown',
+  'Cable Triceps Pushdown',
+  'Leg Extension',
+  'Seated Leg Curl',
+  'Seated Calf Raise',
+  'Cable Rope Crunch',
+  'Seated Lateral Raise',
+  'Reverse Machine Fly',
+  'Overhead Cable Triceps Extension',
+  'Cable Cross-over',
+])
+
+export function usesBlockCount(exerciseName: string) {
+  return blockCountExercises.has(exerciseName)
+}
+
 export const seedExercises: Exercise[] = catalog.map(([name, muscleGroup]) => ({
   id: `exercise-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
   name,

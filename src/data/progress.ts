@@ -101,11 +101,15 @@ export async function getProgressData(): Promise<ProgressData> {
     if (week) week.workoutCount += 1
     const exercisesById = new Map(record.exercises.map((exercise) => [exercise.id, exercise]))
     const completed = record.sets.filter(isValidCompletedSet)
-    completedWorkingSets += completed.length
+    const validCompletedCount = record.sets.filter((set) => {
+      if (!set.completed || set.reps === null || set.reps < 1) return false
+      return exercisesById.get(set.sessionExerciseId)?.loadType === 'blocks' ? set.blockCount != null : isValidCompletedSet(set)
+    }).length
+    completedWorkingSets += validCompletedCount
     const volume = completed.reduce((sum, set) => sum + set.weightKg * set.reps, 0)
     totalVolumeKgReps += volume
     if (week) {
-      week.completedSets += completed.length
+      week.completedSets += validCompletedCount
       week.volumeKgReps += volume
     }
     for (const set of completed) {

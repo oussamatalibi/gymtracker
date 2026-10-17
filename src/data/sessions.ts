@@ -1,5 +1,6 @@
 import { db, defaultUserSettings } from './database'
 import type { SessionExercise, WorkoutPlan, WorkoutSession, WorkoutSet } from './models'
+import { usesBlockCount } from './routine'
 
 const makeId = (prefix: string) => `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`
 
@@ -40,6 +41,7 @@ export async function startOrResumeSession(plan: WorkoutPlan): Promise<WorkoutSe
       maxReps: item.maxReps,
       repsNote: item.repsNote,
       isUnilateral: Boolean(item.repsNote?.toLowerCase().includes('side')),
+      loadType: usesBlockCount(item.exercise.name) ? 'blocks' : 'weight',
     }))
     const sets: WorkoutSet[] = sessionExercises.flatMap((exercise) =>
       Array.from({ length: exercise.targetSets }, (_, index) => ({
@@ -48,6 +50,7 @@ export async function startOrResumeSession(plan: WorkoutPlan): Promise<WorkoutSe
         sessionExerciseId: exercise.id,
         setNumber: index + 1,
         weightKg: null,
+        blockCount: null,
         reps: null,
         completed: false,
         updatedAt: now,
@@ -70,18 +73,21 @@ export async function getSessionDetails(sessionId: string) {
   return { session, exercises, sets: sets.sort((a, b) => a.setNumber - b.setNumber) }
 }
 
-export async function updateWorkoutSet(setId: string, field: 'weightKg' | 'reps', value: number | null) {
+export async function updateWorkoutSet(setId: string, field: 'weightKg' | 'blockCount' | 'reps', value: number | null) {
   if (value !== null && (!Number.isFinite(value) || value < 0)) throw new Error('Enter a valid non-negative value.')
   if (field === 'reps' && value !== null && !Number.isInteger(value)) throw new Error('Repetitions must be a whole number.')
+  if (field === 'blockCount' && value !== null && !Number.isInteger(value)) throw new Error('Block count must be a whole number.')
   await db.workoutSets.update(setId, { [field]: value, updatedAt: Date.now() })
 }
 
 export async function setWorkoutSetComplete(setId: string, completed: boolean) {
-  return db.transaction('rw', db.workoutSets, db.sessions, db.userSettings, async () => {
+  return db.transaction('rw', db.workoutSets, db.sessionExercises, db.sessions, db.userSettings, async () => {
     const set = await db.workoutSets.get(setId)
     if (!set) throw new Error('This set could not be found.')
-    if (completed && (set.weightKg === null || set.reps === null || set.reps < 1)) {
-      throw new Error('Enter a weight and at least 1 rep before completing this set.')
+    const exercise = await db.sessionExercises.get(set.sessionExerciseId)
+    const load = exercise?.loadType === 'blocks' ? set.blockCount : set.weightKg
+    if (completed && (load == null || set.reps === null || set.reps < 1)) {
+      throw new Error(`Enter ${exercise?.loadType === 'blocks' ? 'a block count' : 'a weight'} and at least 1 rep before completing this set.`)
     }
     await db.workoutSets.update(setId, { completed, updatedAt: Date.now() })
     if (completed) {
@@ -106,6 +112,7 @@ export async function addWorkoutSet(sessionId: string, sessionExerciseId: string
     sessionExerciseId,
     setNumber: nextNumber,
     weightKg: existing.at(-1)?.weightKg ?? null,
+    blockCount: existing.at(-1)?.blockCount ?? null,
     reps: existing.at(-1)?.reps ?? null,
     completed: false,
     updatedAt: Date.now(),
