@@ -41,7 +41,9 @@ export async function startOrResumeSession(plan: WorkoutPlan): Promise<WorkoutSe
       maxReps: item.maxReps,
       repsNote: item.repsNote,
       isUnilateral: Boolean(item.repsNote?.toLowerCase().includes('side')),
-      loadType: usesBlockCount(item.exercise.name) ? 'blocks' : 'weight',
+      // Upper A tracks every exercise by selector-block position, including
+      // dumbbell movements. Other workouts keep the exercise-specific default.
+      loadType: item.templateId === 'upper-a' || usesBlockCount(item.exercise.name) ? 'blocks' : 'weight',
     }))
     const sets: WorkoutSet[] = sessionExercises.flatMap((exercise) =>
       Array.from({ length: exercise.targetSets }, (_, index) => ({
