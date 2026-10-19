@@ -69,6 +69,12 @@ function WorkoutSessionPage({ session, onSessionChange }: Props) {
   const completedCount = details.sets.filter((set) => set.completed).length
   const totalCount = details.sets.length
   const completedWeight = useMemo(() => details.sets.filter((set) => set.completed && set.weightKg !== null && set.reps !== null).reduce((sum, set) => sum + (set.weightKg ?? 0) * (set.reps ?? 0), 0), [details.sets])
+  const completedBlockVolume = useMemo(() => {
+    const blockExercises = new Map(details.exercises.filter((exercise) => exercise.loadType === 'blocks').map((exercise) => [exercise.id, true]))
+    return details.sets
+      .filter((set) => set.completed && blockExercises.has(set.sessionExerciseId) && set.blockCount !== null && set.blockCount !== undefined && set.reps !== null)
+      .reduce((sum, set) => sum + (set.blockCount ?? 0) * (set.reps ?? 0), 0)
+  }, [details.exercises, details.sets])
 
   async function runAction(action: () => Promise<unknown>) {
     setError('')
@@ -122,7 +128,7 @@ function WorkoutSessionPage({ session, onSessionChange }: Props) {
         <div className="session-clock"><span>ELAPSED</span><strong>{formatDuration(elapsed)}</strong><span className={`session-status ${session.status}`}>{session.status}</span></div>
       </header>
 
-      <div className="session-progress"><div><span>SESSION PROGRESS</span><strong>{completedCount}<small> / {totalCount} sets</small></strong></div><div className="progress-track"><i style={{ width: `${totalCount ? completedCount / totalCount * 100 : 0}%` }} /></div><span className="volume-label">Logged weight volume <strong>{completedWeight.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg × reps</strong></span></div>
+      <div className="session-progress"><div><span>SESSION PROGRESS</span><strong>{completedCount}<small> / {totalCount} sets</small></strong></div><div className="progress-track"><i style={{ width: `${totalCount ? completedCount / totalCount * 100 : 0}%` }} /></div><span className="volume-label">Logged loads <strong>{completedWeight.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg × reps</strong>{completedBlockVolume > 0 && <strong>{completedBlockVolume.toLocaleString()} block-reps</strong>}</span></div>
 
       {session.status === 'paused' && <div className="paused-banner">Workout paused — the workout clock is stopped until you resume.</div>}
       {error && <p className="session-error" role="alert">{error}</p>}

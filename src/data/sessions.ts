@@ -1,6 +1,6 @@
 import { db, defaultUserSettings } from './database'
 import type { SessionExercise, WorkoutPlan, WorkoutSession, WorkoutSet } from './models'
-import { usesBlockCount } from './routine'
+import { usesBlocksInSession } from './routine'
 
 const makeId = (prefix: string) => `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`
 
@@ -41,9 +41,7 @@ export async function startOrResumeSession(plan: WorkoutPlan): Promise<WorkoutSe
       maxReps: item.maxReps,
       repsNote: item.repsNote,
       isUnilateral: Boolean(item.repsNote?.toLowerCase().includes('side')),
-      // Upper A tracks every exercise by selector-block position, including
-      // dumbbell movements. Other workouts keep the exercise-specific default.
-      loadType: item.templateId === 'upper-a' || usesBlockCount(item.exercise.name) ? 'blocks' : 'weight',
+      loadType: usesBlocksInSession(item.templateId, item.exercise.name) ? 'blocks' : 'weight',
     }))
     const sets: WorkoutSet[] = sessionExercises.flatMap((exercise) =>
       Array.from({ length: exercise.targetSets }, (_, index) => ({

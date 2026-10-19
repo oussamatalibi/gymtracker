@@ -41,8 +41,17 @@ const blockCountExercises = new Set([
   'Cable Cross-over',
 ])
 
+const upperAWeightExercises = new Set([
+  'Incline Dumbbell Chest Press',
+  'Flat Dumbbell Chest Press',
+])
+
 export function usesBlockCount(exerciseName: string) {
   return blockCountExercises.has(exerciseName)
+}
+
+export function usesBlocksInSession(templateId: string, exerciseName: string) {
+  return (templateId === 'upper-a' && !upperAWeightExercises.has(exerciseName)) || usesBlockCount(exerciseName)
 }
 
 export const seedExercises: Exercise[] = catalog.map(([name, muscleGroup]) => ({

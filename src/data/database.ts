@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { Exercise, SessionExercise, TemplateExercise, UserSettings, WorkoutSession, WorkoutSet, WorkoutTemplate } from './models'
-import { seedExercises, seedTemplateExercises, seedTemplates, usesBlockCount } from './routine'
+import { seedExercises, seedTemplateExercises, seedTemplates, usesBlockCount, usesBlocksInSession } from './routine'
 
 class GymTrackerDatabase extends Dexie {
   exercises!: EntityTable<Exercise, 'id'>
@@ -50,6 +50,27 @@ class GymTrackerDatabase extends Dexie {
       await Promise.all(exercises.filter((exercise: { sessionId: string }) => openSessionIds.has(exercise.sessionId)).map((exercise: { id: string; exerciseName: string }) =>
         transaction.table('sessionExercises').update(exercise.id, { loadType: usesBlockCount(exercise.exerciseName) ? 'blocks' : 'weight' }),
       ))
+    })
+    this.version(5).stores({
+      exercises: 'id, name, muscleGroup, isCustom, archived',
+      templates: 'id, dayIndex',
+      templateExercises: 'id, templateId, exerciseId, [templateId+position]',
+      sessions: 'id, status, startedAt, templateId',
+      sessionExercises: 'id, sessionId, exerciseId, [sessionId+position]',
+      workoutSets: 'id, sessionId, sessionExerciseId, [sessionExerciseId+setNumber], completed',
+      userSettings: 'id',
+    }).upgrade(async (transaction) => {
+      const [openSessions, exercises] = await Promise.all([
+        transaction.table('sessions').where('status').anyOf('active', 'paused').toArray(),
+        transaction.table('sessionExercises').toArray(),
+      ])
+      const openSessionIds = new Map(openSessions.map((session: { id: string; templateId: string }) => [session.id, session.templateId]))
+      await Promise.all(exercises.flatMap((exercise: { id: string; sessionId: string; exerciseName: string }) => {
+        const templateId = openSessionIds.get(exercise.sessionId)
+        return templateId ? [transaction.table('sessionExercises').update(exercise.id, {
+          loadType: usesBlocksInSession(templateId, exercise.exerciseName) ? 'blocks' : 'weight',
+        })] : []
+      }))
     })
   }
 }
