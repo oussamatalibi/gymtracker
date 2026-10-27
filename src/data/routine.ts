@@ -33,7 +33,6 @@ const blockCountExercises = new Set([
   'Cable Triceps Pushdown',
   'Leg Extension',
   'Seated Leg Curl',
-  'Seated Calf Raise',
   'Cable Rope Crunch',
   'Seated Lateral Raise',
   'Reverse Machine Fly',
