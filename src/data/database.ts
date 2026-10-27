@@ -96,6 +96,11 @@ export async function seedRoutineIfNeeded() {
     for (const entry of seedTemplateExercises) {
       if (!(await db.templateExercises.get(entry.id))) await db.templateExercises.add(entry)
     }
+    const lowerLegPress = seedTemplateExercises.find((entry) => entry.id === 'lower-3')
+    const existingLowerExercise = await db.templateExercises.get('lower-3')
+    if (lowerLegPress && existingLowerExercise?.exerciseId === 'exercise-hip-thrust') {
+      await db.templateExercises.update('lower-3', { exerciseId: lowerLegPress.exerciseId })
+    }
     if (!(await db.userSettings.get(defaultUserSettings.id))) await db.userSettings.add(defaultUserSettings)
   })
 }
